@@ -39,6 +39,7 @@ temp/
 # Documentation - exclude all except README.md
 CONTEXT.md
 PROJECT-SETUP.md
+docs/getting-started.md
 docs/DEMO-*.md
 docs/REGO-*.md
 docs/QUICK-START.md
