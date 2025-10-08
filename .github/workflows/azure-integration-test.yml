@@ -66,41 +66,39 @@ jobs:
         terraform show -json tfplan.binary > tfplan.json
 
     - name: Run OPA Security Scan
-      working-directory: examples
       run: |
         echo "Running security scan..."
         opa eval \
-          --data ../policies/azure-storage-misconfigurations.rego \
+          --data policies/azure-storage-misconfigurations.rego \
           --input tfplan.json \
           --format pretty \
           'data.azure.storage.deny' | tee scan-results.json
 
     - name: Generate Scan Summary
-      working-directory: examples
       run: |
         echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
         TOTAL=$(opa eval \
-          --data ../policies/azure-storage-misconfigurations.rego \
+          --data policies/azure-storage-misconfigurations.rego \
           --input tfplan.json \
           --format raw \
           'data.azure.storage.violation_summary.total_violations')
 
         HIGH=$(opa eval \
-          --data ../policies/azure-storage-misconfigurations.rego \
+          --data policies/azure-storage-misconfigurations.rego \
           --input tfplan.json \
           --format raw \
           'data.azure.storage.violation_summary.by_severity.HIGH')
 
         MEDIUM=$(opa eval \
-          --data ../policies/azure-storage-misconfigurations.rego \
+          --data policies/azure-storage-misconfigurations.rego \
           --input tfplan.json \
           --format raw \
           'data.azure.storage.violation_summary.by_severity.MEDIUM')
 
         LOW=$(opa eval \
-          --data ../policies/azure-storage-misconfigurations.rego \
+          --data policies/azure-storage-misconfigurations.rego \
           --input tfplan.json \
           --format raw \
           'data.azure.storage.violation_summary.by_severity.LOW')
@@ -130,17 +128,6 @@ jobs:
       with:
         name: azure-scan-results-${{ github.run_number }}
         path: |
-          examples/tfplan.json
-          examples/scan-results.json
+          tfplan.json
+          scan-results.json
         retention-days: 30
-
-    - name: Cleanup test resources
-      if: always()
-      run: |
-        if az storage account show --name tfscantestsa${{ github.run_number }} --resource-group ${{ env.AZURE_RESOURCE_GROUP }} &>/dev/null; then
-          echo "Cleaning up test storage account..."
-          az storage account delete \
-            --name tfscantestsa${{ github.run_number }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --yes
-        fi
