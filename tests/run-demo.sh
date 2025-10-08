@@ -18,20 +18,33 @@ echo "  ❌ Missing infrastructure encryption"
 echo "  ❌ Missing diagnostic logging"
 echo "  ❌ Missing soft delete"
 echo ""
-cd /Users/home/Developer/tfscan/examples
+
+# Get script directory and navigate to project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_ROOT/examples"
+
 cat azure-storage-test.tf | grep -A 10 "bad_no_logging"
 echo ""
 read -p "Press Enter to continue..."
 echo ""
 
-echo "=== Step 2: Generate Terraform Plan JSON ==="
-echo "Creating Terraform plan (what would be deployed to Azure)..."
+echo "=== Step 2: Use Pre-Generated Terraform Plan ==="
+echo "Using the pre-generated Terraform plan JSON..."
+echo "(No Azure credentials needed - pure static analysis)"
 echo ""
-terraform init -backend=false > /dev/null 2>&1
-terraform plan -out=tfplan.binary > /dev/null 2>&1
-terraform show -json tfplan.binary > tfplan.json
-echo "✅ Terraform plan JSON generated:"
-ls -lh tfplan.json
+
+if [ -f "$PROJECT_ROOT/tfplan.json" ]; then
+    echo "✅ Using Terraform plan JSON:"
+    ls -lh "$PROJECT_ROOT/tfplan.json"
+else
+    echo "⚠️  Pre-generated plan not found, generating new one..."
+    terraform init -backend=false > /dev/null 2>&1
+    terraform plan -out=tfplan.binary > /dev/null 2>&1
+    terraform show -json tfplan.binary > tfplan.json
+    echo "✅ Terraform plan JSON generated:"
+    ls -lh tfplan.json
+fi
 echo ""
 read -p "Press Enter to continue..."
 echo ""
@@ -39,7 +52,7 @@ echo ""
 echo "=== Step 3: Show REGO Policy Check ==="
 echo "This REGO rule checks if storage accounts have soft delete enabled:"
 echo ""
-cat ../policies/azure-storage-misconfigurations.rego | grep -A 15 "blobs-soft-deletion-enabled" | head -20
+cat "$PROJECT_ROOT/policies/azure-storage-misconfigurations.rego" | grep -A 15 "blobs-soft-deletion-enabled" | head -20
 echo ""
 echo "How it works:"
 echo "  1. Iterates through all azurerm_storage_account resources"
@@ -52,9 +65,11 @@ echo ""
 echo "=== Step 4: Run REGO Scan ==="
 echo "Scanning Terraform plan with custom REGO policies..."
 echo ""
-~/opa eval \
-  --data ../policies/azure-storage-misconfigurations.rego \
-  --input ../tfplan.json \
+
+# Use opa from PATH (installed via brew)
+opa eval \
+  --data "$PROJECT_ROOT/policies/azure-storage-misconfigurations.rego" \
+  --input "$PROJECT_ROOT/tfplan.json" \
   --format pretty \
   'data.azure.storage.deny' | head -30
 echo ""
@@ -66,9 +81,9 @@ echo ""
 echo "=== Step 5: Get Summary ==="
 echo "Violation summary by severity:"
 echo ""
-~/opa eval \
-  --data ../policies/azure-storage-misconfigurations.rego \
-  --input ../tfplan.json \
+opa eval \
+  --data "$PROJECT_ROOT/policies/azure-storage-misconfigurations.rego" \
+  --input "$PROJECT_ROOT/tfplan.json" \
   --format pretty \
   'data.azure.storage.violation_summary'
 echo ""
