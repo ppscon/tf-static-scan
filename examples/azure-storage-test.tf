@@ -12,6 +12,9 @@ terraform {
 
 provider "azurerm" {
   features {}
+
+  # Allow running without Azure authentication for static analysis
+  skip_provider_registration = true
 }
 
 # ❌ BAD: Missing blob service logging

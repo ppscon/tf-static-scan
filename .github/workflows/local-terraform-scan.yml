@@ -28,6 +28,13 @@ jobs:
 
     - name: Generate Terraform Plan (from examples)
       working-directory: examples
+      env:
+        # Mock Azure credentials for static analysis (no actual Azure connection)
+        ARM_CLIENT_ID: "00000000-0000-0000-0000-000000000000"
+        ARM_CLIENT_SECRET: "mock-secret-for-static-analysis"
+        ARM_SUBSCRIPTION_ID: "00000000-0000-0000-0000-000000000000"
+        ARM_TENANT_ID: "00000000-0000-0000-0000-000000000000"
+        ARM_SKIP_PROVIDER_REGISTRATION: "true"
       run: |
         echo "Initializing Terraform..."
         terraform init -backend=false
