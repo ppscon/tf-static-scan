@@ -1,10 +1,11 @@
 package azure.storage
+
 # title: Azure Storage Account Must Have Soft Delete Enabled
 # description: Blob soft deletion protects data from accidental deletion
 # id: blobs-soft-deletion-enabled
 # avd_id: AVD-AZU-0033
 # severity: MEDIUM
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -19,7 +20,7 @@ deny[res] {
     }
 }
 
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -35,7 +36,7 @@ deny[res] {
     }
 }
 
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -59,7 +60,7 @@ deny[res] {
 # id: enable-geo-redundant-backups
 # avd_id: AVD-AZU-0038
 # severity: HIGH
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -74,7 +75,7 @@ deny[res] {
     }
 }
 
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -92,19 +93,19 @@ deny[res] {
     }
 }
 
-is_geo_redundant(replication) {
+is_geo_redundant(replication) if {
     replication == "GRS"
 }
 
-is_geo_redundant(replication) {
+is_geo_redundant(replication) if {
     replication == "GZRS"
 }
 
-is_geo_redundant(replication) {
+is_geo_redundant(replication) if {
     replication == "RA-GRS"
 }
 
-is_geo_redundant(replication) {
+is_geo_redundant(replication) if {
     replication == "RA-GZRS"
 }
 
@@ -114,7 +115,7 @@ is_geo_redundant(replication) {
 # id: infrastructure-encryption-enabled
 # avd_id: AVD-AZU-0027
 # severity: HIGH
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -129,7 +130,7 @@ deny[res] {
     }
 }
 
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -149,7 +150,7 @@ deny[res] {
 # description: Ensures blob containers are encrypted with customer-managed keys
 # id: blob-container-cmk-encrypted
 # severity: MEDIUM
-deny[res] {
+deny contains res if {
     container := input.configuration.root_module.resources[_]
     container.type == "azurerm_storage_container"
     container.mode == "managed"
@@ -178,7 +179,7 @@ deny[res] {
 # description: Ensures storage account has diagnostic logging enabled
 # id: storage-account-logging-enabled
 # severity: MEDIUM
-deny[res] {
+deny contains res if {
     storage_account := input.configuration.root_module.resources[_]
     storage_account.type == "azurerm_storage_account"
     storage_account.mode == "managed"
@@ -197,7 +198,7 @@ deny[res] {
     }
 }
 
-has_diagnostic_setting(storage_account_id) {
+has_diagnostic_setting(storage_account_id) if {
     diagnostic := input.configuration.root_module.resources[_]
     diagnostic.type == "azurerm_monitor_diagnostic_setting"
 
@@ -211,7 +212,7 @@ has_diagnostic_setting(storage_account_id) {
 # id: log-storage-encryption
 # avd_id: AVD-AZU-0010
 # severity: HIGH
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -227,7 +228,7 @@ deny[res] {
     }
 }
 
-deny[res] {
+deny contains res if {
     resource := input.configuration.root_module.resources[_]
     resource.type == "azurerm_storage_account"
     resource.mode == "managed"
@@ -244,7 +245,7 @@ deny[res] {
 }
 
 # Summary count for reporting
-violation_summary = {
+violation_summary := {
     "total_violations": count(deny),
     "by_severity": {
         "HIGH": count([v | v := deny[_]; v.severity == "HIGH"]),

@@ -18,7 +18,10 @@ if ! command -v opa &> /dev/null; then
     exit 1
 fi
 
-echo "✅ OPA version: $(opa version | head -1)"
+# Use the brew-installed OPA (newer version)
+OPA_CMD="opa"
+
+echo "✅ OPA version: $(${OPA_CMD} version | head -1)"
 echo ""
 
 # Navigate to examples directory
@@ -42,7 +45,7 @@ echo "🔍 Running security scan..."
 echo "======================================"
 echo ""
 
-opa eval \
+${OPA_CMD} eval \
   --data ../policies/azure-storage-misconfigurations.rego \
   --input tfplan.json \
   --format pretty \
@@ -56,7 +59,7 @@ echo ""
 echo "📊 Violation Summary:"
 echo ""
 
-opa eval \
+${OPA_CMD} eval \
   --data ../policies/azure-storage-misconfigurations.rego \
   --input tfplan.json \
   --format pretty \
@@ -65,7 +68,7 @@ opa eval \
 echo ""
 
 # Check for HIGH severity
-HIGH_COUNT=$(opa eval \
+HIGH_COUNT=$(${OPA_CMD} eval \
   --data ../policies/azure-storage-misconfigurations.rego \
   --input tfplan.json \
   --format raw \
