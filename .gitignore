@@ -35,3 +35,10 @@ violations.json
 # Temporary files
 tmp/
 temp/
+
+# Documentation - exclude all except README.md
+CONTEXT.md
+PROJECT-SETUP.md
+docs/DEMO-*.md
+docs/REGO-*.md
+docs/QUICK-START.md
