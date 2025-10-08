@@ -206,31 +206,65 @@ resource "azurerm_storage_account" "bad_no_logging" {
 [
   {
     "id": "blobs-soft-deletion-enabled",
-    "msg": "Storage account 'bad_no_logging' does not have blob soft delete enabled...",
+    "msg": "Storage account 'bad_incomplete_logging' soft delete retention is less than 7 days (currently: 3 days). Increase to at least 7 days.",
+    "resource": "bad_incomplete_logging",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "blobs-soft-deletion-enabled",
+    "msg": "Storage account 'bad_no_blob_logging' does not have soft delete enabled. Configure delete_retention_policy.",
+    "resource": "bad_no_blob_logging",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "blobs-soft-deletion-enabled",
+    "msg": "Storage account 'bad_no_logging' does not have blob soft delete enabled. Configure delete_retention_policy with at least 7 days.",
+    "resource": "bad_no_logging",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "blobs-soft-deletion-enabled",
+    "msg": "Storage account 'bad_no_soft_delete' does not have soft delete enabled. Configure delete_retention_policy.",
+    "resource": "bad_no_soft_delete",
     "severity": "MEDIUM"
   },
   {
     "id": "enable-geo-redundant-backups",
-    "msg": "Storage account 'bad_no_logging' uses 'LRS' replication (not geo-redundant)...",
+    "msg": "Storage account 'bad_no_logging' uses 'LRS' replication (not geo-redundant). Change to GRS, GZRS, RA-GRS, or RA-GZRS for disaster recovery.",
+    "resource": "bad_no_logging",
     "severity": "HIGH"
   },
   ...
 ]
+
+(Showing first 30 lines - total 27 violations found)
 ```
 
 **What to say:**
 
-> "And here we go - violations detected! Look at this output.
+> "And here we go - violations detected! Look at this output - it's JSON formatted so it's easy to parse in CI/CD pipelines.
 >
-> **First violation**: 'Storage account bad_no_logging does not have blob soft delete enabled' - that's the CloudSploit check `blobs-soft-deletion-enabled`, mapped directly into our REGO policy. Medium severity.
+> Let me walk through what we're seeing here:
 >
-> **Second violation**: 'Uses LRS replication not geo-redundant' - that's `enable-geo-redundant-backups` from CloudSploit. High severity because data loss risk.
+> **First four violations** - All related to soft delete (`blobs-soft-deletion-enabled`). Notice how specific the messages are:
+> - 'bad_incomplete_logging' has soft delete but retention is only 3 days - we require at least 7
+> - 'bad_no_blob_logging' doesn't have soft delete configured at all
+> - 'bad_no_logging' missing the entire blob_properties block
+> - 'bad_no_soft_delete' also missing the configuration
 >
-> **Third violation**: 'Missing infrastructure encryption' - another high severity issue.
+> All of these are MEDIUM severity - important security controls but not catastrophic if missing temporarily.
 >
-> These are the **exact same findings** CloudSploit would report, but we're catching them during `terraform plan`, not after deployment.
+> **Fifth violation** - Now here's a HIGH severity one: 'bad_no_logging uses LRS replication not geo-redundant.' That's the `enable-geo-redundant-backups` check from CloudSploit. This is HIGH because if the Azure region goes down, **all data is permanently lost**. No disaster recovery.
 >
-> I'm showing you the first 30 lines here, but we actually found **27 total violations** across the test file. Let me show you the summary..."
+> Notice each violation tells you:
+> - **id**: Which CloudSploit check this maps to
+> - **msg**: Clear human-readable explanation of what's wrong and how to fix it
+> - **resource**: Exactly which storage account has the problem
+> - **severity**: How critical it is - HIGH, MEDIUM, or LOW
+>
+> These are the **exact same findings** CloudSploit would report, but we're catching them during `terraform plan`, not after deployment. The difference is timing - we're finding this in your PR, not in production 2 hours later.
+>
+> I'm showing you the first 30 lines here, but we actually found **27 total violations** across the test file. Let me show you the summary breakdown..."
 
 **[PRESS ENTER]**
 
