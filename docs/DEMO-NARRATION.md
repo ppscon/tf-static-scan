@@ -114,38 +114,39 @@ resource "azurerm_storage_account" "bad_no_logging" {
 
 ### 📍 PAUSE 3: After Step 3 (REGO Policy)
 
-**Screen shows:**
+**Screen shows (from policies/azure-storage-misconfigurations.rego lines 1-21):**
 ```rego
-# METADATA
-# title: Azure Storage Account Must Have Soft Delete Enabled
-# description: Blob soft deletion protects data from accidental deletion
-# id: blobs-soft-deletion-enabled
-# avd_id: AVD-AZU-0033
-# severity: MEDIUM
-deny[res] {
-    resource := input.configuration.root_module.resources[_]
-    resource.type == "azurerm_storage_account"
-    resource.mode == "managed"
-
-    not resource.expressions.blob_properties
-
-    res := {
-        "msg": sprintf("Storage account '%s' does not have blob soft delete enabled. Configure delete_retention_policy with at least 7 days.", [resource.name]),
-        "severity": "MEDIUM",
-        "id": "blobs-soft-deletion-enabled",
-        "resource": resource.name
-    }
-}
+1  package azure.storage
+2  # title: Azure Storage Account Must Have Soft Delete Enabled
+3  # description: Blob soft deletion protects data from accidental deletion
+4  # id: blobs-soft-deletion-enabled
+5  # avd_id: AVD-AZU-0033
+6  # severity: MEDIUM
+7  deny contains res if {
+8      resource := input.configuration.root_module.resources[_]
+9      resource.type == "azurerm_storage_account"
+10     resource.mode == "managed"
+11
+12     not resource.expressions.blob_properties
+13
+14     res := {
+15         "msg": sprintf("Storage account '%s' does not have blob soft delete enabled...", [resource.name]),
+16         "severity": "MEDIUM",
+17         "id": "blobs-soft-deletion-enabled",
+18         "resource": resource.name
+19     }
+20 }
 ```
 
 **YOUR CHEAT SHEET (what each line means):**
-- **Lines 1-6**: Metadata (title, description, severity) - just documentation
-- **Line 7**: `deny[res] {` - This defines a rule that adds violations to the "deny" collection
-- **Line 8**: `resource := input.configuration.root_module.resources[_]` - Loop through ALL resources in the Terraform plan
-- **Line 9**: `resource.type == "azurerm_storage_account"` - Filter: only look at Azure storage accounts
+- **Line 1**: `package azure.storage` - Namespace for our policies
+- **Lines 2-6**: Metadata (title, description, CloudSploit ID, severity) - documentation
+- **Line 7**: `deny contains res if {` - Defines a rule that adds violations to the "deny" set (modern OPA 1.9+ syntax)
+- **Line 8**: `resource := input.configuration.root_module.resources[_]` - Loop through ALL resources in Terraform plan
+- **Line 9**: `resource.type == "azurerm_storage_account"` - Filter: only Azure storage accounts
 - **Line 10**: `resource.mode == "managed"` - Filter: only resources we create (not data sources)
 - **Line 12**: `not resource.expressions.blob_properties` - **THE KEY CHECK**: Is blob_properties missing?
-- **Lines 14-19**: Create the violation report with message, severity, ID, resource name
+- **Lines 14-19**: Build the violation report with message, severity, ID, and resource name
 
 **What to say:**
 
@@ -153,28 +154,31 @@ deny[res] {
 >
 > REGO is the policy language from Open Policy Agent. Think of it like SQL for policies - you describe what you're looking for, and OPA finds it.
 >
-> Let me break this down in plain English:
+> Let me walk through this line by line:
 >
-> **[Point to top of screen - metadata section]**
-> First, we have metadata up here - title, description, the CloudSploit check ID it maps to, and severity level. That's just documentation.
+> **[Point to Line 1]**
+> Line 1: `package azure.storage` - This is just the namespace, like a folder for organizing our policies.
 >
-> **[Point to 'deny[res] {' line]**
-> This line says 'I'm going to define a rule that creates violations.' The word 'deny' means if this rule matches, we block it.
+> **[Point to Lines 2-6 - metadata section]**
+> Lines 2 through 6 - metadata. Title, description, the CloudSploit check ID it maps to (`blobs-soft-deletion-enabled`), and severity level (MEDIUM). That's just documentation to help us understand what this rule does.
 >
-> **[Point to 'resource := input...' line]**
-> Here we're saying 'Loop through ALL resources in the Terraform plan.' The underscore is a wildcard - it matches any resource, any index.
+> **[Point to Line 7: 'deny contains res if {']**
+> Line 7: This is where the rule starts. `deny contains res if {` - This says 'I'm going to define a rule that adds violations to the deny set.' The word 'deny' means if this rule matches, we block deployment. The `contains res if` is modern OPA 1.9 syntax.
 >
-> **[Point to 'resource.type ==' line]**
-> Now we filter down - we only care about Azure storage accounts. So if Terraform has 50 resources but only 5 are storage accounts, we only check those 5.
+> **[Point to Line 8: 'resource := input...']**
+> Line 8: `resource := input.configuration.root_module.resources[_]` - Here we're looping through ALL resources in the Terraform plan. The underscore in brackets is a wildcard - it means 'every element in the array.' So this loops through resource 1, resource 2, resource 3, all of them.
 >
-> **[Point to 'resource.mode ==' line]**
-> This line filters out data sources - we only want to check resources we're actually creating or managing.
+> **[Point to Line 9: 'resource.type ==']**
+> Line 9: `resource.type == "azurerm_storage_account"` - Now we filter. We only care about Azure storage accounts. So if Terraform has 50 resources but only 5 are storage accounts, we only check those 5.
 >
-> **[Point to 'not resource.expressions.blob_properties' line]**
-> And THIS is the heart of the check. We're asking: 'Is the blob_properties block missing?' The word 'not' means 'if this doesn't exist.' So if a storage account doesn't have blob_properties configured, that means no soft delete, and we flag it as a violation.
+> **[Point to Line 10: 'resource.mode ==']**
+> Line 10: `resource.mode == "managed"` - This filters out data sources. We only want to check resources we're actually creating or managing, not ones we're just reading.
 >
-> **[Point to 'res := {' section]**
-> Finally, if we found a violation, we create a structured result - a human-readable message explaining what's wrong, the severity level, which CloudSploit check this maps to, and which specific resource is the problem.
+> **[Point to Line 12: 'not resource.expressions.blob_properties']**
+> Line 12: And THIS is the heart of the check. `not resource.expressions.blob_properties` - We're asking: 'Is the blob_properties block missing?' The word 'not' means 'if this doesn't exist.' So if a storage account doesn't have blob_properties configured, that means no soft delete configuration, and we flag it as a violation.
+>
+> **[Point to Lines 14-19: 'res := {' section]**
+> Lines 14 through 19: If we found a violation, we create a structured result. A human-readable message explaining what's wrong, the severity level (MEDIUM), which CloudSploit check this maps to, and which specific resource has the problem. This is what you'll see in the CI/CD pipeline output.
 >
 > **[Broader point]**
 > I've written six of these rules total - one for each CloudSploit check we want to shift left:
