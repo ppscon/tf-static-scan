@@ -1,0 +1,82 @@
+name: Demo Security Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master, main ]
+
+jobs:
+  demo-scan:
+    runs-on: ubuntu-latest
+    name: Static Security Scan Demo
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download OPA
+      run: |
+        curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64
+        chmod +x opa
+        ./opa version
+
+    - name: Run Security Scan
+      run: |
+        echo "🔍 Running security scan on pre-generated Terraform plan..."
+        echo ""
+
+        ./opa eval \
+          --data policies/azure-storage-misconfigurations.rego \
+          --input tfplan.json \
+          --format pretty \
+          'data.azure.storage.deny' | tee scan-results.json
+
+    - name: Generate Summary
+      run: |
+        echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Scan Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        TOTAL=$(./opa eval \
+          --data policies/azure-storage-misconfigurations.rego \
+          --input tfplan.json \
+          --format raw \
+          'data.azure.storage.violation_summary.total_violations')
+
+        HIGH=$(./opa eval \
+          --data policies/azure-storage-misconfigurations.rego \
+          --input tfplan.json \
+          --format raw \
+          'data.azure.storage.violation_summary.by_severity.HIGH')
+
+        MEDIUM=$(./opa eval \
+          --data policies/azure-storage-misconfigurations.rego \
+          --input tfplan.json \
+          --format raw \
+          'data.azure.storage.violation_summary.by_severity.MEDIUM')
+
+        LOW=$(./opa eval \
+          --data policies/azure-storage-misconfigurations.rego \
+          --input tfplan.json \
+          --format raw \
+          'data.azure.storage.violation_summary.by_severity.LOW')
+
+        echo "### Violations Detected" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|------:|" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔴 HIGH | $HIGH |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🟡 MEDIUM | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🟢 LOW | $LOW |" >> $GITHUB_STEP_SUMMARY
+        echo "| **TOTAL** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Scan completed successfully!" >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload Scan Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: demo-scan-results
+        path: scan-results.json
+        retention-days: 30
