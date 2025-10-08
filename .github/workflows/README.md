@@ -34,7 +34,11 @@ gh workflow run terraform-security-scan.yml
 - Manual workflow dispatch only
 
 **Prerequisites:**
-- Azure credentials stored in GitHub secret `AZURE_CREDENTIALS`
+- Azure credentials stored in GitHub secrets:
+  - `AQUA_KEY` (Service Principal App ID)
+  - `AQUA_PASSWORD` (Service Principal Password)
+  - `AQUA_SECRET` (Tenant ID)
+  - `AQUA_SERVER` (Subscription ID)
 - Access to resource group `pp-rg`
 - Access to AKS cluster `pp-fips-cbom-demo`
 
@@ -61,26 +65,26 @@ gh workflow run azure-integration-test.yml -f deploy_to_aks=false
 
 ### 1. Configure Azure Credentials
 
-Create a service principal and store credentials in GitHub:
+See the detailed setup guide: [SETUP-SECRETS.md](../SETUP-SECRETS.md)
 
+**Quick setup:**
 ```bash
 # Create service principal
 az ad sp create-for-rbac \
   --name "tf-static-scan-github" \
   --role contributor \
-  --scopes /subscriptions/71d0a3d0-ad98-4db0-b732-f95dc566a10a/resourceGroups/pp-rg \
-  --sdk-auth
-
-# Copy the JSON output and add it as a GitHub secret named AZURE_CREDENTIALS
+  --scopes /subscriptions/71d0a3d0-ad98-4db0-b732-f95dc566a10a/resourceGroups/pp-rg
 ```
 
-### 2. Add GitHub Secret
+### 2. Add GitHub Secrets
 
-1. Go to your repository Settings
-2. Navigate to Secrets and variables → Actions
-3. Click "New repository secret"
-4. Name: `AZURE_CREDENTIALS`
-5. Value: Paste the JSON output from service principal creation
+Map the service principal output to these secrets:
+
+1. `AQUA_KEY` → `appId` from output
+2. `AQUA_PASSWORD` → `password` from output
+3. `AQUA_SECRET` → `tenant` from output (or `bc034cf3-566b-41ca-9f24-5dc49474b05e`)
+4. `AQUA_SERVER` → `71d0a3d0-ad98-4db0-b732-f95dc566a10a`
+5. `AQUA_USER` → Same as `AQUA_KEY`
 
 ---
 

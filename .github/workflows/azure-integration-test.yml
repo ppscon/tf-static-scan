@@ -26,7 +26,13 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        creds: |
+          {
+            "clientId": "${{ secrets.AQUA_KEY }}",
+            "clientSecret": "${{ secrets.AQUA_PASSWORD }}",
+            "subscriptionId": "${{ secrets.AQUA_SERVER }}",
+            "tenantId": "${{ secrets.AQUA_SECRET }}"
+          }
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
