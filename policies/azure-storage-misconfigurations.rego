@@ -1,5 +1,4 @@
 package azure.storage
-
 # title: Azure Storage Account Must Have Soft Delete Enabled
 # description: Blob soft deletion protects data from accidental deletion
 # id: blobs-soft-deletion-enabled
